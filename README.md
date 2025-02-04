@@ -1,8 +1,6 @@
-# React + Vite
+Mod11-MiniProject-Advanced-API
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Description: In this code, I’ve created a React app that handles customer, product, and order management. I imported several components like `CustomerDetails`, `ProductDetails`, and `OrderDetails`, as well as forms to add or edit customers, products, and orders. I used `react-router-dom` to define different routes, which determine what components are shown for each URL path (e.g., customer list, product details, or order details). I’ve also included a `NavigationBar` for navigation between pages, and a wildcard route (`*`) to catch any undefined paths and show a "Not Found" page. Bootstrap is used for styling the app.
 
-Currently, two official plugins are available:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Author:Donald Clemons
