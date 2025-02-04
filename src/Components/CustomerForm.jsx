@@ -1,219 +1,126 @@
-import { Component } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { func, number } from "prop-types";
 import { Form, Button, Alert, Container, Modal } from "react-bootstrap";
 
-// Controlled Component
-// When React (via state) controls the value of an input
-// Useful for state management, form validation, 'source of truth' i.e. state will always be up to date with current value. UI will always be updated.
+const CustomerForm = () => {
+    const { customerId } = useParams(); 
+    const navigate = useNavigate();
 
-class CustomerForm extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      name: "",
-      email: "",
-      phone: "",
-      errors: {},
-      isLoading: false,
-      selectedCustomerId: null,
-      showSuccessModal: false,
+    const [name, setName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [errors, setErrors] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+
+    useEffect(() => {
+        if (customerId) {
+            axios.get(`http://127.0.0.1:5000/customers/${customerId}`)
+                .then(response => {
+                    const { name, email, phone } = response.data;
+                    setName(name);
+                    setEmail(email);
+                    setPhone(phone);
+                })
+                .catch(error => console.error("Error fetching customer data:", error));
+        }
+    }, [customerId]);
+
+
+    const handleChange = (event) => {
+        const { name, value } = event.target;
+        if (name === "name") setName(value);
+        if (name === "email") setEmail(value);
+        if (name === "phone") setPhone(value);
     };
-  }
 
-  componentDidMount() {
-    const { id } = this.props.params;
-    console.log(id);
-    if (id) {
-      // Route in Flask app for accessing data from an associated customer id
-      this.fetchCustomerData(id);
-    }
-  }
+    
+    const validateForm = () => {
+        let newErrors = {};
+        if (!name.trim()) newErrors.name = "Name is required";
+        if (!email.trim()) newErrors.email = "Email is required";
+        if (!phone.trim()) newErrors.phone = "Phone is required";
+        return newErrors;
+    };
 
-  fetchCustomerData = (id) => {
-    axios
-      .get(`http://127.0.0.1:5000/customers/${id}`)
-      .then((response) => {
-        const customerData = response.data;
-        this.setState({
-          name: customerData.name,
-          email: customerData.email,
-          phone: customerData.phone,
-          selectedCustomerId: id,
-        });
-      })
-      .catch((error) => {
-        console.error("Error fetching customer data:", error);
-      });
-  };
+  
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        const newErrors = validateForm();
 
-  componentDidUpdate(prevProps) {
-    if (prevProps.customerId !== this.props.customerId) {
-      this.setState({ selectedCustomerId: this.props.customerId });
+        if (Object.keys(newErrors).length === 0) {
+            setIsLoading(true);
+            const customerData = { name: name.trim(), email: email.trim(), phone: phone.trim() };
 
-      if (this.props.customerId) {
-        axios
-          .get(`http://127.0.0.1:5000/customers/${this.props.customerId}`)
-          .then((response) => {
-            const customerData = response.data;
-            this.setState({
-              name: customerData.name,
-              email: customerData.email,
-              phone: customerData.phone,
-            });
-          })
-          .catch((error) => {
-            console.error("Error fetching customer data:", error);
-          });
-      } else {
-        this.setState({
-          name: "",
-          email: "",
-          phone: "",
-        });
-      }
-    }
-  }
+            const apiUrl = customerId
+                ? `http://127.0.0.1:5000/customers/${customerId}`
+                : "http://127.0.0.1:5000/customers";
+            const httpMethod = customerId ? axios.put : axios.post;
 
-  handleChange = (event) => {
-    const { name, value } = event.target;
-    this.setState({ [name]: value });
-    console.log(name, value);
-  };
+            httpMethod(apiUrl, customerData)
+                .then(() => {
+                    setShowSuccessModal(true);
+                })
+                .catch(error => {
+                    console.error("Error submitting form:", error);
+                    setIsLoading(false);
+                });
+        } else {
+            setErrors(newErrors);
+        }
+    };
 
-  validateForm = () => {
-    const { name, email, phone } = this.state;
-    const errors = {};
-    if (!name) errors.name = "Name is required";
-    if (!email) errors.email = "Email is required";
-    if (!phone) errors.phone = "Phone is required";
-    return errors;
-  };
-
-  handleSubmit = (event) => {
-    event.preventDefault();
-    const errors = this.validateForm();
-    if (Object.keys(errors).length === 0) {
-      this.setState({ isLoading: true, error: null });
-      console.log("Submitted Customer:", this.state);
-
-      const customerData = {
-        name: this.state.name.trim(),
-        email: this.state.email.trim(),
-        phone: this.state.phone.trim(),
-      };
-
-      const apiUrl = this.state.selectedCustomerId
-        ? `http://127.0.0.1:5000/customers/${this.state.selectedCustomerId}`
-        : "http://127.0.0.1:5000/customers";
-
-      const httpMethod = this.state.selectedCustomerId ? axios.put : axios.post;
-
-      httpMethod(apiUrl, customerData)
-        .then(() => {
-          // Handle successful submissions here
-          // Clearing the form, showing a success message, etc.
-          this.setState({
-            name: "",
-            email: "",
-            phone: "",
-            errors: {},
-            selectedCustomerId: null,
-            isLoading: false,
-            showSuccessModal: true,
-          });
-        })
-        .catch((error) => {
-          console.error("There was an error submitting the form:", error);
-          // Handle errors here, show error message to the user
-          this.setState({ isLoading: false });
-        });
-    } else {
-      this.setState({ errors });
-    }
-  };
-
-  closeModal = () => {
-    this.setState({
-      showSuccessModal: false,
-      name: "",
-      email: "",
-      phone: "",
-      errors: {},
-      selectedCustomerId: null,
-    });
-    this.props.navigate("/customers");
-  };
-
-  render() {
-    const { name, email, phone, errors, error, isLoading, showSuccessModal } = this.state;
+   
+    const closeModal = () => {
+        setShowSuccessModal(false);
+        navigate("/customers");
+    };
 
     return (
-      <Container>
-        {isLoading && (
-          <Alert variant="info">Submitting customer data....</Alert>
-        )}
-        {error && (
-          <Alert variant="danger">
-            Error submitting customer data: {error}
-          </Alert>
-        )}
-        <Form onSubmit={this.handleSubmit}>
-          <Form.Group controlId="formGroupName">
-            <Form.Label>Name</Form.Label>
-            <Form.Control
-              type="text"
-              name="name"
-              value={name}
-              onChange={this.handleChange}
-            ></Form.Control>
-            {errors.name && <div style={{ color: "red" }}>{errors.name}</div>}
-          </Form.Group>
-          <Form.Group controlId="formGroupEmail">
-            <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="text"
-              name="email"
-              value={email}
-              onChange={this.handleChange}
-            ></Form.Control>
-            {errors.email && <div style={{ color: "red" }}>{errors.email}</div>}
-          </Form.Group>
-          <Form.Group controlId="formGroupPhone">
-            <Form.Label>Phone</Form.Label>
-            <Form.Control
-              type="tel"
-              name="phone"
-              value={phone}
-              onChange={this.handleChange}
-            ></Form.Control>
-            {errors.phone && <div style={{ color: "red" }}>{errors.phone}</div>}
-          </Form.Group>
-          <Button variant="primary" type="submit">
-            Submit
-          </Button>
-        </Form>
+        <Container>
+            {isLoading && <Alert variant="info">Submitting customer data...</Alert>}
+            
+            <Form onSubmit={handleSubmit}>
+                <Form.Group controlId="formGroupName">
+                    <Form.Label>Name</Form.Label>
+                    <Form.Control type="text" name="name" value={name} onChange={handleChange} />
+                    {errors.name && <div style={{ color: "red" }}>{errors.name}</div>}
+                </Form.Group>
 
-        <Modal show={showSuccessModal} onHide={this.closeModal}>
-            <Modal.Header closeButton>
-                <Modal.Title>Success!</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-                The Customer Has Been Successfully {this.state.selectedCustomerId ? 'updated' : 'added'}.
+                <Form.Group controlId="formGroupEmail">
+                    <Form.Label>Email</Form.Label>
+                    <Form.Control type="text" name="email" value={email} onChange={handleChange} />
+                    {errors.email && <div style={{ color: "red" }}>{errors.email}</div>}
+                </Form.Group>
 
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant='secondary' onClick={this.closeModal}>Close</Button>
+                <Form.Group controlId="formGroupPhone">
+                    <Form.Label>Phone</Form.Label>
+                    <Form.Control type="tel" name="phone" value={phone} onChange={handleChange} />
+                    {errors.phone && <div style={{ color: "red" }}>{errors.phone}</div>}
+                </Form.Group>
 
-            </Modal.Footer>
+                <Button variant="primary" type="submit">
+                    {customerId ? "Update Customer" : "Add Customer"}
+                </Button>
+            </Form>
 
-        </Modal>
-      </Container>
+            
+            <Modal show={showSuccessModal} onHide={closeModal}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Success!</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    The customer has been successfully {customerId ? "updated" : "added"}.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={closeModal}>Close</Button>
+                </Modal.Footer>
+            </Modal>
+        </Container>
     );
-  }
-}
-CustomerForm.propTypes = {
-  customerId: number,
-  onUpdateCustomerList: func,
 };
+
 export default CustomerForm;
+

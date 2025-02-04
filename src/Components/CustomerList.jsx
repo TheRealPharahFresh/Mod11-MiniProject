@@ -1,85 +1,77 @@
-import { Component } from "react";
-import { func } from 'prop-types';
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { Link } from 'react-router-dom'; 
+import { Link, useNavigate } from "react-router-dom"; 
 import { Button, Alert, Container, ListGroup } from "react-bootstrap";
 
-class CustomerList extends Component {
-    constructor(props) {
-        super(props);
-        this.state = {
-            customers: [],
-            selectedCustomerId: null,
-            error: null
-        };
-    }
+const CustomerList = () => {
+    const [customers, setCustomers] = useState([]); 
+    const [error, setError] = useState(null); 
+    const navigate = useNavigate(); 
+
     
-    componentDidMount() {
-        this.fetchCustomers();
-    }
+    useEffect(() => {
+        fetchCustomers();
+    }, []);
 
-
-    fetchCustomers = () => {
-        axios.get('http://127.0.0.1:5000/customers')
-            .then(response => {
-                // Assuming the response data is an array of customers
-                this.setState({ customers: response.data });
-                console.log("customers:}", response.data)
-            })
-            .catch(error => {
-                console.error('Error fetching data:', error);
-                this.setState({error: 'Error fetching customers. Please try again later.'});
-            });
-    }
-
-    componentDidUpdate(prevProps, prevState) {
-        if (prevState.selectedCustomerId !== this.state.selectedCustomerId) {
-            console.log(`New customer selected: ID ${this.state.selectedCustomerId}`);
+   
+    const fetchCustomers = async () => {
+        try {
+            const response = await axios.get("http://127.0.0.1:5000/customers");
+            setCustomers(response.data);
+            console.log("Fetched customers:", response.data);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            setError("Error fetching customers. Please try again later.");
         }
-    }
+    };
 
+    
+    const selectCustomer = (id) => {
+        navigate(`/customers/${id}`); 
+    };
 
-    selectCustomer = (id) => {
-        this.setState({ selectedCustomerId: id });
-        this.props.onCustomerSelect(id);
-    }
+    
+    const deleteCustomer = async (customerId) => {
+        try {
+            await axios.delete(`http://127.0.0.1:5000/customers/${customerId}`);
+            setCustomers(customers.filter(customer => customer.id !== customerId)); 
+        } catch (error) {
+            console.error("Error deleting customer:", error);
+            setError("Error deleting customer. Please try again.");
+        }
+    };
 
-    deleteCustomer = (customerId) => {
-       
-        axios.delete(`http://127.0.0.1:5000/customers/${customerId}`)
-            .then(() => {
-                this.fetchCustomers();
-            })
-            .catch(error => {
-                console.error('Error deleting customer:', error);
-                this.setState({error: 'Error deleting customer. Please try again.'});
-            });
-    }
-
-    render() {
-        const { customers, error } = this.state;
-
-        return (
-            <Container>
-                {error && <Alert variant='danger'>{error}</Alert>}
-                <h3 className="mt-3 mb-3 text-center">Customers</h3>
-                <ListGroup>
-                    {customers.map(customer => (
-                        <ListGroup.Item key={customer.id} className="d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-white rounded">
-                            <p>{customer.id}</p>
-                            <Link to={`/customers/${customer.id}`} className="text-primary">{customer.name}</Link>
-                            <Button variant='danger' size='sm' onClick={() => this.deleteCustomer(customer.id)}>Delete</Button>
-                        </ListGroup.Item>
-                    ))}
-                </ListGroup>
-            </Container>
-
-        );
-    }
-}
-
-CustomerList.propTypes = {
-    onCustomerSelect: func
+    return (
+        <Container>
+            {error && <Alert variant="danger">{error}</Alert>}
+            <h3 className="mt-3 mb-3 text-center">Customers</h3>
+            <ListGroup>
+                {customers.map(customer => (
+                    <ListGroup.Item 
+                        key={customer.id} 
+                        className="d-flex justify-content-between align-items-center shadow-sm p-3 mb-3 bg-white rounded"
+                    >
+                        <p>{customer.id}</p>
+                        <span 
+                            className="text-primary cursor-pointer" 
+                            onClick={() => selectCustomer(customer.id)} 
+                            style={{ cursor: "pointer" }}
+                        >
+                            {customer.name}
+                        </span>
+                        <Button 
+                            variant="danger" 
+                            size="sm" 
+                            onClick={() => deleteCustomer(customer.id)}
+                        >
+                            Delete
+                        </Button>
+                    </ListGroup.Item>
+                ))}
+            </ListGroup>
+        </Container>
+    );
 };
 
 export default CustomerList;
+

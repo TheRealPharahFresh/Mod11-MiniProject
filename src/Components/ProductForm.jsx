@@ -1,23 +1,13 @@
 import { useEffect, useState } from "react";
-import {
-  Form,
-  Button,
-  Alert,
-  Modal,
-  Spinner,
-} from "react-bootstrap";
-import { object, func } from "prop-types";
+import { Form, Button, Alert, Modal, Spinner } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
-//uncontrolled components
-// Simpler. Direct Data management. improve performance. closer to traditional html
-
-const ProductForm = () => {
-  const [product, setProduct] = useState({ name: "", price: "" });
+const OrderForm = () => {
+  const [order, setOrder] = useState({ customer_id: "", status: "Pending", products: [] });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setSubmitting] = useState(false);
-  const [showSuccessModal, setShowSuccessfulModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { id } = useParams();
   const navigate = useNavigate();
@@ -25,9 +15,9 @@ const ProductForm = () => {
   useEffect(() => {
     if (id) {
       axios
-        .get(`http://127.0.0.1:5000/products/${id}`)
+        .get(`http://127.0.0.1:5000/orders/${id}`)
         .then((response) => {
-          setProduct(response.data);
+          setOrder(response.data);
         })
         .catch((error) => setErrorMessage(error.message));
     }
@@ -35,9 +25,8 @@ const ProductForm = () => {
 
   const validateForm = () => {
     let errors = {};
-    if (!product.name) errors.name = "Product name is required";
-    if (!product.price || product.price <= 0)
-      errors.price = "Price must be a positive number";
+    if (!order.customer_id) errors.customer_id = "Customer is required";
+    if (!order.status) errors.status = "Order status is required";
     setErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -48,76 +37,77 @@ const ProductForm = () => {
     setSubmitting(true);
     try {
       if (id) {
-        await axios.put(`http://127.0.0.1:5000/products/${id}`, product);
+        await axios.put(`http://127.0.0.1:5000/orders/${id}`, order);
       } else {
-        await axios.post("http://127.0.0.1:5000/products", product);
+        await axios.post("http://127.0.0.1:5000/orders", order);
       }
-      setShowSuccessfulModal(true);
+      setShowSuccessModal(true);
     } catch (error) {
       setErrorMessage(error.message);
     } finally {
       setSubmitting(false);
     }
-
-    //handle form submission
-    //sending the data to an api or updating state in parent component
   };
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setProduct((prevProduct) => ({
-      ...prevProduct,
+    setOrder((prevOrder) => ({
+      ...prevOrder,
       [name]: value,
     }));
   };
 
   const handleClose = () => {
-    setShowSuccessfulModal(false);
-    setProduct({ name: "", price: "" });
+    setShowSuccessModal(false);
+    setOrder({ customer_id: "", status: "Pending", products: [] });
     setSubmitting(false);
-    navigate("/products");
+    navigate("/orders");
   };
 
-  if (isSubmitting) return <p>Submitting product data....</p>;
+  if (isSubmitting) return <p>Submitting order data....</p>;
 
   return (
     <>
       <Form onSubmit={handleSubmit}>
-        <h3>{id ? "Edit" : "Add"}Product</h3>
+        <h3>{id ? "Edit" : "Add"} Product</h3>
         {errorMessage && <Alert variant="danger">{errorMessage}</Alert>}
-        <Form.Group controlId="productName">
-          <Form.Label>Name:</Form.Label>
+
+        <Form.Group controlId="customerId">
+          <Form.Label>Customer ID:</Form.Label>
           <Form.Control
             type="text"
-            name="name"
-            value={product.name}
+            name="customer_id"
+            value={order.customer_id}
             onChange={handleChange}
-            isInvalid={!!errors.name}
+            isInvalid={!!errors.customer_id}
           />
           <Form.Control.Feedback type="invalid">
-            {errors.name}
-          </Form.Control.Feedback>
-        </Form.Group>
-        <Form.Group controlId="productPrice">
-          <Form.Label>Price:</Form.Label>
-          <Form.Control
-            type="number"
-            name="price"
-            value={product.price}
-            onChange={handleChange}
-            isInvalid={!!errors.name}
-          />
-          <Form.Control.Feedback type="invalid">
-            {errors.price}
+            {errors.customer_id}
           </Form.Control.Feedback>
         </Form.Group>
 
+        <Form.Group controlId="orderStatus">
+          <Form.Label>Status:</Form.Label>
+          <Form.Control
+            as="select"
+            name="status"
+            value={order.status}
+            onChange={handleChange}
+            isInvalid={!!errors.status}
+          >
+            <option value="Pending">Pending</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Delivered">Delivered</option>
+          </Form.Control>
+          <Form.Control.Feedback type="invalid">
+            {errors.status}
+          </Form.Control.Feedback>
+        </Form.Group>
+
+        
+
         <Button variant="primary" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? (
-            <Spinner as="span" animation="border" size="sm" />
-          ) : (
-            "Submit"
-          )}
+          {isSubmitting ? <Spinner as="span" animation="border" size="sm" /> : "Submit"}
         </Button>
       </Form>
 
@@ -126,7 +116,7 @@ const ProductForm = () => {
           <Modal.Title>Success</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Product Has been successfully {id ? "updated" : "added"}!
+          Order has been successfully {id ? "updated" : "added"}!
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>
@@ -138,9 +128,5 @@ const ProductForm = () => {
   );
 };
 
-ProductForm.propTypes = {
-  selectedProduct: object,
-  onProductUpdated: func,
-};
+export default OrderForm;
 
-export default ProductForm;

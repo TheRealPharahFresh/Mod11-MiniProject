@@ -1,42 +1,68 @@
-import { func, number} from 'prop-types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { Button, Container, ListGroup, Row, Col } from 'react-bootstrap';
+
+const OrderList = () => {
+  const [orders, setOrders] = useState([]);
+  const navigate = useNavigate();
+
+  
+  const fetchOrders = useCallback( async () => {
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/orders`);
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  },);
 
 
-const OrderList = ({customerId, onOrderSelect}) => {
-    const[orders, setOrders] = useState([]);
-// [fills the empty array with the fetched order below]
-    //useEffect(setup<function>, dependency)
+  const viewOrderDetails = (orderId) => {
+    navigate(`/orders/${orderId}`);
+  };
 
 
-    useEffect(() => {
-        //Mimicking an API call
-        if (customerId) {
-            const fetchedOrders = [
-                {id: 101, date: '2021-01-01'},
-                {id: 102, date: '2021-01-15'},
-            ];
-            setOrders(fetchedOrders);
-        }
-    }, [customerId]);
+  const placeNewOrder = () => {
+    navigate('/place-order');
+  };
 
-    return (
-        <div>
-            <h3 className='order-list'>Orders</h3>
-            <ul>
-                {orders.map(order => (
-                    <li key={order.id} onClick={() => onOrderSelect(order.id)}>
-                        Order ID: {order.id}, (Date: {order.date})
-                    </li>
-                ))}
-            </ul>
-        </div>
-    );
+  useEffect(() => {
+      fetchOrders();
+  },  [fetchOrders]);
+
+  return (
+    <Container>
+      <Row>
+        <Col>
+          <h3>Orders</h3>
+          {orders.length === 0 ? (
+            <p>No orders available.</p>
+          ) : (
+            <ListGroup>
+              {orders.map((order) => (
+                <ListGroup.Item
+                  key={order.id}
+                  className="d-flex justify-content-between align-items-center shadow-sm mb-3 bg-white rounded"
+                >
+                  <div
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => viewOrderDetails(order.id)}
+                  >
+                    Order ID: {order.id} (Date: {order.date})
+                  </div>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          )}
+          <Button variant="primary" onClick={placeNewOrder}>
+            Place New Order
+          </Button>
+        </Col>
+      </Row>
+    </Container>
+  );
 };
 
-OrderList.propTypes = {
-    customerId: number,
-    onOrderSelect: func
-
-}
-
 export default OrderList;
+
